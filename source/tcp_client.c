@@ -173,6 +173,7 @@ cy_semaphore_t connect_to_server;
 /* Holds the IP address obtained for SoftAP using Wi-Fi Connection Manager (WCM). */
 cy_wcm_ip_address_t softap_ip_address;
 
+QueueHandle_t data_q;
 const char* user_ip = "192.168.0.109";
 /*******************************************************************************
  * Function Name: tcp_client_task
@@ -191,10 +192,9 @@ const char* user_ip = "192.168.0.109";
 void tcp_client_task(void *arg)
 {
     cy_rslt_t result ;
-    uint8_t uart_input[UART_BUFFER_SIZE];
-
     cy_wcm_config_t wifi_config = { .interface = WIFI_INTERFACE_TYPE };
-
+    BaseType_t rtos_api_result;
+    uint32_t data_to_send = 0;
     /* IP address and TCP port number of the TCP server to which the TCP client
      * connects to.
      */
@@ -261,20 +261,6 @@ void tcp_client_task(void *arg)
         cy_rtos_semaphore_get(&connect_to_server, CY_RTOS_NEVER_TIMEOUT);
 
         printf("Connect to TCP server\n");
-        printf("Enter the IPv4 address of the TCP Server:\n");
-
-        /* Prevent system from entering deep sleep mode
-         * when receiving data from UART.
-         */
-        cyhal_syspm_lock_deepsleep();
-
-        /* Clear the UART input buffer. */
-//        memset(uart_input, 0, UART_BUFFER_SIZE);
-
-        /* Read the TCP server's IPv4 address from  the user via the
-         * UART terminal.
-         */
-//        read_uart_input(uart_input);
 
         /* Allow system to enter deep sleep mode. */
         cyhal_syspm_unlock_deepsleep();
@@ -285,9 +271,9 @@ void tcp_client_task(void *arg)
         /* Connect to the TCP server. If the connection fails, retry
          * to connect to the server for MAX_TCP_SERVER_CONN_RETRIES times.
          */
-        cy_nw_ntoa(&nw_ip_addr, (char *)&uart_input);
+//        cy_nw_ntoa(&nw_ip_addr, (char *)&uart_input);
         printf("Connecting to TCP Server (IP Address: %s, Port: %d)\n\n",
-                      uart_input, TCP_SERVER_PORT);
+                      user_ip, TCP_SERVER_PORT);
 
         result = connect_to_tcp_server(tcp_server_address);
 
@@ -297,6 +283,27 @@ void tcp_client_task(void *arg)
 
             /* Give the semaphore so as to connect to TCP server.  */
             cy_rtos_semaphore_set(&connect_to_server);
+        }else
+        {
+            printf("Connected to TCP server\n");
+            rtos_api_result = xQueueReceive(data_q, &data_to_send, portMAX_DELAY);
+
+//            cy_socket_send(socket_handle, message_buffer, strlen(message_buffer),
+//                                        CY_SOCKET_FLAGS_NONE, &bytes_sent);
+            if(rtos_api_result == pdTRUE){
+				uint32_t bytes_sent = 0;
+				cy_rslt_t send_result = cy_socket_send(client_handle, &data_to_send, sizeof(data_to_send), CY_SOCKET_FLAGS_NONE, &bytes_sent);
+
+				if (send_result != CY_RSLT_SUCCESS) {
+					printf("Failed to send data to server. Error code: %lu\n", send_result);
+				} else {
+					printf("Sent data to server. Bytes sent: %lu\n", bytes_sent);
+				}
+            }
+            else
+            {
+            	printf("Timeout\n");
+            }
         }
     }
  }

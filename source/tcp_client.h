@@ -39,13 +39,15 @@
 * of such system or application assumes all risk of such use and in doing
 * so agrees to indemnify Cypress against all liability.
 *******************************************************************************/
-
+#include <FreeRTOS.h>
+#include "queue.h"
 #ifndef TCP_CLIENT_H_
 #define TCP_CLIENT_H_
 
 /*******************************************************************************
 * Function Prototype
 ********************************************************************************/
+extern QueueHandle_t data_q;
 void tcp_client_task(void *arg);
 
 #endif /* TCP_CLIENT_H_ */

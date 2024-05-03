@@ -118,6 +118,7 @@ endif
 
 # Add additional defines to the build process (without a leading -D).
 DEFINES+= CYBSP_WIFI_CAPABLE CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE
+DEFINES+=USE_AK4954A
 
 ifeq ($(findstring THREADX, $(COMPONENTS)), THREADX)
 

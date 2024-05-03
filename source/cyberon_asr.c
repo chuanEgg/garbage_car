@@ -122,7 +122,6 @@ void cyberon_asr_process(short *lpsSample, int nNumSample)
 		g_lpfnCallback(__func__, "Confidence Score", itoa(nConfidenceScore, pchBuf, 10));
 		g_lpfnCallback(__func__, "Volume Energy", itoa(nVolumeEnergy, pchBuf, 10));
 		g_lpfnCallback(__func__, "**************************", "--");
-		/*Do recording here*/
 	}
 	else if(nErr == DSPOTTER_ERR_Expired)
 	{
