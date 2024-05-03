@@ -60,6 +60,7 @@
 
 /* TCP client task header file. */
 #include "tcp_client.h"
+#include "voice_activate.h"
 
 /* IP address related header files. */
 #include "cy_nw_helper.h"
@@ -142,7 +143,7 @@
 #define RTOS_TICK_TO_WAIT                         (50u)
 #define UART_INPUT_TIMEOUT_MS                     (1u)
 #define UART_BUFFER_SIZE                          (20u)
-
+#define BUFFER_SIZE								  (32767u)
 #define SEMAPHORE_LIMIT                           (1u)
 
 
@@ -194,7 +195,7 @@ void tcp_client_task(void *arg)
     cy_rslt_t result ;
     cy_wcm_config_t wifi_config = { .interface = WIFI_INTERFACE_TYPE };
     BaseType_t rtos_api_result;
-    uint32_t data_to_send = 0;
+    int16_t data_to_send[BUFFER_SIZE];
     /* IP address and TCP port number of the TCP server to which the TCP client
      * connects to.
      */
@@ -257,54 +258,53 @@ void tcp_client_task(void *arg)
 
     for(;;)
     {
-        /* Wait till semaphore is acquired so as to connect to a TCP server. */
-        cy_rtos_semaphore_get(&connect_to_server, CY_RTOS_NEVER_TIMEOUT);
+		/* Wait till semaphore is acquired so as to connect to a TCP server. */
+		cy_rtos_semaphore_get(&connect_to_server, CY_RTOS_NEVER_TIMEOUT);
 
-        printf("Connect to TCP server\n");
+		printf("Connect to TCP server\n");
 
-        /* Allow system to enter deep sleep mode. */
-        cyhal_syspm_unlock_deepsleep();
+		cy_nw_str_to_ipv4((char *) user_ip, (cy_nw_ip_address_t *)&nw_ip_addr);
+		tcp_server_address.ip_address.ip.v4 = nw_ip_addr.ip.v4;
 
-        cy_nw_str_to_ipv4((char *) user_ip, (cy_nw_ip_address_t *)&nw_ip_addr);
-        tcp_server_address.ip_address.ip.v4 = nw_ip_addr.ip.v4;
+		/* Connect to the TCP server. If the connection fails, retry
+		 * to connect to the server for MAX_TCP_SERVER_CONN_RETRIES times.
+		 */
+		//        cy_nw_ntoa(&nw_ip_addr, (char *)&uart_input);
+		printf("Connecting to TCP Server (IP Address: %s, Port: %d)\n\n",
+					  user_ip, TCP_SERVER_PORT);
 
-        /* Connect to the TCP server. If the connection fails, retry
-         * to connect to the server for MAX_TCP_SERVER_CONN_RETRIES times.
-         */
-//        cy_nw_ntoa(&nw_ip_addr, (char *)&uart_input);
-        printf("Connecting to TCP Server (IP Address: %s, Port: %d)\n\n",
-                      user_ip, TCP_SERVER_PORT);
+		result = connect_to_tcp_server(tcp_server_address);
 
-        result = connect_to_tcp_server(tcp_server_address);
+		if(result != CY_RSLT_SUCCESS)
+		{
+			printf("Failed to connect to TCP server.\n");
 
-        if(result != CY_RSLT_SUCCESS)
-        {
-            printf("Failed to connect to TCP server.\n");
-
-            /* Give the semaphore so as to connect to TCP server.  */
-            cy_rtos_semaphore_set(&connect_to_server);
-        }else
-        {
-            printf("Connected to TCP server\n");
-            rtos_api_result = xQueueReceive(data_q, &data_to_send, portMAX_DELAY);
-
-//            cy_socket_send(socket_handle, message_buffer, strlen(message_buffer),
-//                                        CY_SOCKET_FLAGS_NONE, &bytes_sent);
-            if(rtos_api_result == pdTRUE){
-				uint32_t bytes_sent = 0;
-				cy_rslt_t send_result = cy_socket_send(client_handle, &data_to_send, sizeof(data_to_send), CY_SOCKET_FLAGS_NONE, &bytes_sent);
-
-				if (send_result != CY_RSLT_SUCCESS) {
-					printf("Failed to send data to server. Error code: %lu\n", send_result);
-				} else {
-					printf("Sent data to server. Bytes sent: %lu\n", bytes_sent);
-				}
-            }
-            else
-            {
-            	printf("Timeout\n");
-            }
-        }
+			/* Give the semaphore so as to connect to TCP server.  */
+			cy_rtos_semaphore_set(&connect_to_server);
+		}
+		else
+		{
+			printf("Connected to TCP server\n");
+//			for(;;)
+//			{
+//				rtos_api_result = xQueueReceive(send_data_q, &data_to_send, 0u);
+//				xQueueReset(send_data_q);
+//				//		cy_socket_send(client_handle, message_buffer, strlen(message_buffer),
+//				//									CY_SOCKET_FLAGS_NONE, &bytes_sent);
+//				if(rtos_api_result == pdTRUE){
+//					uint32_t bytes_sent = 0;
+//					cy_rslt_t send_result = cy_socket_send(client_handle, &data_to_send, sizeof(data_to_send), CY_SOCKET_FLAGS_NONE, &bytes_sent);
+//
+//					if (send_result != CY_RSLT_SUCCESS) {
+//						printf("Failed to send data to server. Error code: %lu\n", send_result);
+//					} else {
+//						printf("Sent data to server. Bytes sent: %lu\n", bytes_sent);
+//					}
+//					cy_rtos_semaphore_set(&connect_to_server);
+//					break;
+//				}
+//			}
+		}
     }
  }
 
@@ -547,7 +547,7 @@ cy_rslt_t connect_to_tcp_server(cy_socket_sockaddr_t address)
 {
     cy_rslt_t result = CY_RSLT_MODULE_SECURE_SOCKETS_TIMEOUT;
     cy_rslt_t conn_result;
-
+    printf("im here\n\n");
     for(uint32_t conn_retries = 0; conn_retries < MAX_TCP_SERVER_CONN_RETRIES; conn_retries++)
     {
         /* Create a TCP socket */

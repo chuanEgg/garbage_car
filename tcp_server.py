@@ -46,10 +46,11 @@ import optparse
 import time
 import sys
 import threading
+import wave
 
 host = socket.gethostbyname(socket.gethostname())  # IP address of the TCP server
 port = 50007                                       # Arbitrary non-privileged port
-RECV_BUFF_SIZE = 4096                              # Receive buffer size
+RECV_BUFF_SIZE = 65535                              # Receive buffer size
 DEFAULT_KEEP_ALIVE = 1                             # TCP Keep Alive: 1 - Enable, 0 - Disable
 
 print("==========================")
@@ -104,6 +105,8 @@ except socket.error as msg:
 if s is None:
     sys.exit(1)
 
+recording = []
+
 while True:    
     try:
         is_client_connected = False;
@@ -126,7 +129,14 @@ while True:
             
             data = conn.recv(RECV_BUFF_SIZE)
             if not data: break
-            print("Acknowledgement from TCP Client:", data.decode('utf-8'))
+            print(len(data))
+            # recording.append(data)
+            # with wave.open("output.wav", "wb") as f:
+            #     f.setnchannels(1)
+            #     f.setsampwidth(2)
+            #     f.setframerate(16000)
+            #     f.writeframes(data)
+            #     print("Recording saved")
             print("")
             
         except socket.error:

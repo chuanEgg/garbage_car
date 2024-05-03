@@ -6,6 +6,8 @@
  */
 #include <FreeRTOS.h>
 #include "queue.h"
+#include "data_queue.h"
+#include "message_buffer.h"
 
 #ifndef SOURCE_VOICE_ACTIVATE_H_
 #define SOURCE_VOICE_ACTIVATE_H_

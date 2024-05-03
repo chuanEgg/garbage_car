@@ -13,6 +13,7 @@
 #include "tcp_client.h"
 #include "radar.h"
 #include "voice_activate.h"
+#include "data_queue.h"
 
 /*******************************************************************************
 * Macros
@@ -29,13 +30,16 @@
 #define RECORD_TASK_STACK_SIZE			(65534)
 #endif
 
-#define MAX_TCP_DATA_PACKET_LENGTH      (20u)
+#define MAX_TCP_DATA_PACKET_LENGTH      (65535u)
 #define QUEUE_SIZE						(1u)
+#define BUFFER_SIZE						(128u)
+#define MESSAGE_BUFFER_SIZE				(65535u)
 /*******************************************************************************
 * Global Variables
 ********************************************************************************/
 /* This enables RTOS aware debugging. */
 volatile int uxTopUsedPriority;
+MessageBufferHandle_t msg_buffer;
 
 int main()
 {
@@ -63,9 +67,10 @@ int main()
     printf("============================================================\n\n");
 
     /* Create queue for inter-task communication */
-    data_q = xQueueCreate(QUEUE_SIZE, MAX_TCP_DATA_PACKET_LENGTH);
+    send_data_q = xQueueCreate(QUEUE_SIZE, MAX_TCP_DATA_PACKET_LENGTH);
+//    msg_buffer = xMessageBufferCreate(MESSAGE_BUFFER_SIZE);
     /* Create the tasks. */
-//    xTaskCreate(tcp_client_task, "Network task", TASK_STACK_SIZE, NULL, TCP_CLIENT_TASK_PRIORITY, NULL);
+    xTaskCreate(tcp_client_task, "Network task", TCP_CLIENT_TASK_STACK_SIZE, NULL, TCP_CLIENT_TASK_PRIORITY, NULL);
     xTaskCreate(voice_activate_task, "Voice task", VOICE_ACTIVATE_TASK_STACK_SIZE, NULL, VOICE_ACTIVATE_TASK_PRIORITY, NULL);
 //    xTaskCreate(record_task, "Record task", RECORD_TASK_STACK_SIZE, NULL, RECORD_TASK_PRIORITY, NULL);
 
